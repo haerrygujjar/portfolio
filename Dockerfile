@@ -9,6 +9,7 @@ RUN pnpm build
 
 FROM nginx:stable-alpine
 
+COPY deploy/nginx-main.conf /etc/nginx/nginx.conf
 COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/deploy/csp.conf /etc/nginx/snippets/portfolio-csp.conf
 COPY --from=build /app/out /usr/share/nginx/html
@@ -16,4 +17,4 @@ COPY --from=build /app/out /usr/share/nginx/html
 EXPOSE 8080
 USER 101:101
 ENTRYPOINT ["nginx"]
-CMD ["-g", "daemon off; pid /tmp/nginx.pid;"]
+CMD ["-g", "daemon off;"]
