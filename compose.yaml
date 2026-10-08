@@ -1,4 +1,28 @@
 services:
+  chat-api:
+    build: ./chat-api
+    restart: unless-stopped
+    environment:
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      BEDROCK_MODEL_ID: ${BEDROCK_MODEL_ID:-us.meta.llama3-1-8b-instruct-v1:0}
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 256m
+    cpus: 0.5
+    pids_limit: 32
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    networks:
+      - frontend
+      - outbound
   portfolio:
     build: .
     restart: unless-stopped
@@ -13,8 +37,18 @@ services:
       - no-new-privileges:true
     mem_limit: 128m
     cpus: 0.5
+    depends_on:
+      chat-api:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/"]
       interval: 30s
       timeout: 3s
       retries: 3
+    networks:
+      - frontend
+
+networks:
+  frontend:
+    internal: true
+  outbound: {}

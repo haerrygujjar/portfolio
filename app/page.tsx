@@ -12,7 +12,10 @@ import {
   Linkedin,
   Mail,
   MapPin,
+  MessageCircle,
+  Send,
   Sparkles,
+  X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
@@ -501,7 +504,88 @@ export default function Home() {
         </div>
         <div className="footer-bottom"><a href="#home">HIRENDRA GUJJAR</a><span>BENGALURU, INDIA · BUILT WITH CARE</span><a href="#home">BACK TO TOP ↑</a></div>
       </footer>
+      <ChatWidget />
     </main>
+  );
+}
+
+function ChatWidget() {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [messages, setMessages] = useState<{ role: "assistant" | "user"; text: string }[]>([
+    { role: "assistant", text: "Hey! I’m Hiren’s portfolio assistant. Ask me about his work, projects, or technical focus." },
+  ]);
+
+  async function sendMessage(text = draft) {
+    const question = text.trim();
+    if (!question || busy) return;
+    setDraft("");
+    setMessages((current) => [...current, { role: "user", text: question }]);
+    setBusy(true);
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: question,
+          history: messages.slice(1).slice(-8).map(({ role, text: content }) => ({ role, content })),
+        }),
+      });
+      const data = await response.json();
+      setMessages((current) => [...current, {
+        role: "assistant",
+        text: response.ok ? data.answer : "I couldn’t get a reply just now. Please try again in a moment.",
+      }]);
+    } catch {
+      setMessages((current) => [...current, { role: "assistant", text: "I couldn’t reach the chat service. Please try again shortly." }]);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="chat-widget">
+      <AnimatePresence>
+        {open && (
+          <motion.section
+            className="chat-panel"
+            role="dialog"
+            aria-label="Chat with Hiren’s portfolio assistant"
+            initial={{ opacity: 0, y: 18, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 12, scale: 0.97 }}
+            transition={{ duration: 0.2 }}
+          >
+            <header className="chat-topbar">
+              <span className="chat-avatar">hg</span>
+              <div><strong>Chat with Hiren</strong><small><span /> Usually around · AI assistant</small></div>
+              <button type="button" onClick={() => setOpen(false)} aria-label="Close chat"><X size={17} /></button>
+            </header>
+            <div className="chat-messages" aria-live="polite">
+              <div className="chat-sources">KNOWLEDGE FROM <span>RESUME</span><span>LINKEDIN</span></div>
+              {messages.map((message, index) => (
+                <p key={`${index}-${message.role}`} className={`chat-bubble ${message.role}`}>{message.text}</p>
+              ))}
+              {busy && <p className="chat-bubble assistant chat-typing">Thinking<span>·</span><span>·</span><span>·</span></p>}
+              {messages.length === 1 && <div className="chat-prompts">
+                {["What does Hiren work on?", "Tell me about Invorto", "What’s his background?"] .map((prompt) => (
+                  <button key={prompt} type="button" onClick={() => void sendMessage(prompt)}>{prompt}<ArrowUpRight size={12} /></button>
+                ))}
+              </div>}
+            </div>
+            <form className="chat-compose" onSubmit={(event) => { event.preventDefault(); void sendMessage(); }}>
+              <input value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={1000} placeholder="Ask me anything…" aria-label="Your message" />
+              <button type="submit" disabled={!draft.trim() || busy} aria-label="Send message"><Send size={16} /></button>
+            </form>
+            <div className="chat-footnote">Replies are generated from Hiren’s public profile.</div>
+          </motion.section>
+        )}
+      </AnimatePresence>
+      <button type="button" className={`chat-launcher${open ? " is-open" : ""}`} onClick={() => setOpen((value) => !value)} aria-expanded={open}>
+        {open ? <X size={19} /> : <><MessageCircle size={18} /><span>Chat with me</span><i /></>}
+      </button>
+    </div>
   );
 }
 
