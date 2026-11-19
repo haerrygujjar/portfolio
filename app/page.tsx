@@ -328,9 +328,9 @@ export default function Home() {
           initial={{ opacity: 0, scale: 0.75, y: 12 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          aria-label="Software engineer avatar"
+          aria-label="Portrait of Hirendra Gujjar"
         >
-          <img src="/figma/avatar.png" alt="Illustrated developer avatar" />
+          <img src="/hiren-gujjar.jpg" alt="Hirendra Gujjar at his desk" />
         </motion.div>
         <motion.p
           className="eyebrow"
