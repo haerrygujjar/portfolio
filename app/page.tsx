@@ -8,17 +8,19 @@ import {
   AudioLines,
   Blocks,
   BriefcaseBusiness,
+  Check,
   Github,
   Linkedin,
   Mail,
   MapPin,
   MessageCircle,
+  MousePointerClick,
   Send,
   Sparkles,
   X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const projects = [
   {
@@ -27,6 +29,13 @@ const projects = [
     type: "VOICE PLATFORM",
     description:
       "A real-time voice platform for enterprise conversations, built around low-latency speech, model orchestration, and dependable telephony connections.",
+    overview:
+      "Invorto brings real-time voice conversations, AI model orchestration, and telephony together in one enterprise platform. The work focused on making conversations feel responsive while keeping the underlying voice path dependable.",
+    focus: [
+      "Real-time voice experiences built with Pipecat, LiveKit, and WebRTC.",
+      "AI model orchestration using Amazon Bedrock.",
+      "Reducing end-to-end response latency for natural conversations.",
+    ],
     impact: "40% lower response latency",
     tags: ["Pipecat", "LiveKit", "WebRTC", "Amazon Bedrock"],
     icon: AudioLines,
@@ -38,6 +47,13 @@ const projects = [
     type: "AGENT PLATFORM",
     description:
       "A practical agent layer for CRM work—bringing together lead operations, reporting, and customer context through orchestrated AI workflows.",
+    overview:
+      "Lumen gives CRM teams an agentic layer for everyday work. It brings lead operations, reporting, and customer context into coordinated workflows, helping teams move from asking questions to getting work done.",
+    focus: [
+      "Agent workflows shaped around CRM operations and customer context.",
+      "Workflow orchestration with LangGraph and Python services.",
+      "A production API layer built with FastAPI and Aurora.",
+    ],
     impact: "100+ enterprise customers",
     tags: ["LangGraph", "Python", "FastAPI", "Aurora"],
     icon: Sparkles,
@@ -49,6 +65,13 @@ const projects = [
     type: "NO-CODE CONVERSATION DESIGN",
     description:
       "A visual workspace that lets teams shape, launch, and refine customer conversations without waiting on a custom build for every change.",
+    overview:
+      "Converse is a no-code conversation design platform. It gives teams a visual place to shape and refine customer journeys, then put those experiences into production without a custom engineering cycle for every change.",
+    focus: [
+      "Visual conversation design for customer-facing teams.",
+      "A Java and Spring AI platform connected to Bedrock.",
+      "Redis-backed services supporting production conversation experiences.",
+    ],
     impact: "1,000+ agents in production",
     tags: ["Java", "Spring AI", "Bedrock", "Redis"],
     icon: Blocks,
@@ -60,6 +83,13 @@ const projects = [
     type: "HEALTHCARE INTEROPERABILITY",
     description:
       "Cloud services for clinical data exchange, designed to move healthcare records across systems with scale, resilience, and less storage overhead.",
+    overview:
+      "These cloud services connect healthcare systems so clinical records can move between them reliably. The work included interoperability flows for FHIR and HL7 data, with a focus on scaling exchange while reducing the storage footprint.",
+    focus: [
+      "Healthcare interoperability with FHIR and HL7 integrations.",
+      "Event-driven services using Spring Boot and Kafka.",
+      "GraphQL and Cassandra in a cloud-based clinical data platform.",
+    ],
     impact: "Up to 60× less storage",
     tags: ["Spring Boot", "Kafka", "GraphQL", "Cassandra"],
     icon: BriefcaseBusiness,
@@ -257,13 +287,22 @@ const skillLogos: Record<string, string> = {
 };
 
 const filters = ["All work", "Voice AI", "Agentic AI", "AI platforms", "Distributed systems"];
+const linkedinUrl = "https://www.linkedin.com/in/hirendra-gujjar-17a519aa";
 
 export default function Home() {
   const [filter, setFilter] = useState("All work");
   const [activeRole, setActiveRole] = useState(0);
+  const [selectedProject, setSelectedProject] = useState<(typeof projects)[number] | null>(null);
+  const projectDialog = useRef<HTMLDialogElement>(null);
   const visibleProjects =
     filter === "All work" ? projects : projects.filter((project) => project.category === filter);
   const role = roles[activeRole];
+
+  useEffect(() => {
+    const dialog = projectDialog.current;
+    if (selectedProject && dialog && !dialog.open) dialog.showModal();
+    if (!selectedProject && dialog?.open) dialog.close();
+  }, [selectedProject]);
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#161513] text-[#f2f1f3]">
@@ -335,7 +374,7 @@ export default function Home() {
           <a href="https://github.com/haerrygujjar" target="_blank" rel="noreferrer" aria-label="GitHub">
             <Github size={17} />
           </a>
-          <a href="https://in.linkedin.com/in/hirendra-gujjar-17a519aa" target="_blank" rel="noreferrer" aria-label="LinkedIn">
+          <a href={linkedinUrl} target="_blank" rel="noreferrer" aria-label="LinkedIn">
             <Linkedin size={17} />
           </a>
           <a href="mailto:hirendragujjar@gmail.com" aria-label="Email">
@@ -405,8 +444,10 @@ export default function Home() {
                       {project.tags.map((tag) => <span key={tag}>{tag}</span>)}
                     </div>
                     <div className="project-links">
-                      <a href="#contact">Live demo <ArrowUpRight size={14} /></a>
-                      <a href="https://github.com/haerrygujjar" target="_blank" rel="noreferrer">GitHub code <ArrowUpRight size={14} /></a>
+                      <button type="button" onClick={() => setSelectedProject(project)} aria-label={`Read more about ${project.name}`}>
+                        More about this project <ArrowDownRight size={15} />
+                      </button>
+                      <span><MousePointerClick size={13} /> Select for details</span>
                     </div>
                   </div>
                 </motion.article>
@@ -500,10 +541,57 @@ export default function Home() {
           <a href="mailto:hirendragujjar@gmail.com"><Mail size={16} /><span><small>EMAIL</small>hirendragujjar@gmail.com</span><ArrowUpRight size={16} /></a>
           <a href="tel:+917829666686"><span className="contact-icon">☎</span><span><small>PHONE</small>+91 78296 66686</span><ArrowUpRight size={16} /></a>
           <a href="https://github.com/haerrygujjar" target="_blank" rel="noreferrer"><Github size={16} /><span><small>GITHUB</small>github.com/haerrygujjar</span><ArrowUpRight size={16} /></a>
-          <a href="https://in.linkedin.com/in/hirendra-gujjar-17a519aa" target="_blank" rel="noreferrer"><Linkedin size={16} /><span><small>LINKEDIN</small>Connect with me</span><ArrowUpRight size={16} /></a>
+          <a href={linkedinUrl} target="_blank" rel="noreferrer"><Linkedin size={16} /><span><small>LINKEDIN</small>Connect with me</span><ArrowUpRight size={16} /></a>
         </div>
         <div className="footer-bottom"><a href="#home">HIRENDRA GUJJAR</a><span>BENGALURU, INDIA · BUILT WITH CARE</span><a href="#home">BACK TO TOP ↑</a></div>
       </footer>
+      <dialog
+        className="project-dialog"
+        ref={projectDialog}
+        aria-labelledby="project-dialog-title"
+        onClose={() => setSelectedProject(null)}
+        onClick={(event) => {
+          if (event.target === projectDialog.current) setSelectedProject(null);
+        }}
+      >
+        {selectedProject && (
+          <article className="project-detail">
+            <div className={`project-detail-art ${selectedProject.tone}`}>
+              <span>{selectedProject.type}</span>
+              {(() => {
+                const Icon = selectedProject.icon;
+                return <Icon size={42} strokeWidth={1.35} aria-hidden="true" />;
+              })()}
+              <span>{selectedProject.category}</span>
+            </div>
+            <div className="project-detail-content">
+              <div className="project-detail-heading">
+                <div>
+                  <span className="project-category">PROJECT / {String(projects.indexOf(selectedProject) + 1).padStart(2, "0")}</span>
+                  <h2 id="project-dialog-title">{selectedProject.name}</h2>
+                </div>
+                <button type="button" className="project-dialog-close" onClick={() => setSelectedProject(null)} aria-label="Close project details" autoFocus>
+                  <X size={19} />
+                </button>
+              </div>
+              <p className="project-detail-overview">{selectedProject.overview}</p>
+              <div className="project-detail-impact"><span /><div><small>REPORTED OUTCOME</small><strong>{selectedProject.impact}</strong></div></div>
+              <section className="project-detail-section" aria-labelledby="project-focus-title">
+                <h3 id="project-focus-title">What it focuses on</h3>
+                <ul>{selectedProject.focus.map((item) => <li key={item}><Check size={15} />{item}</li>)}</ul>
+              </section>
+              <section className="project-detail-section">
+                <h3>Technology</h3>
+                <div className="tag-list">{selectedProject.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
+              </section>
+              <div className="project-detail-actions">
+                <a href={`mailto:hirendragujjar@gmail.com?subject=${encodeURIComponent(`Let’s talk about ${selectedProject.name}`)}`}>Discuss a similar project <ArrowUpRight size={15} /></a>
+                <a href="https://github.com/haerrygujjar" target="_blank" rel="noreferrer">GitHub profile <ArrowUpRight size={15} /></a>
+              </div>
+            </div>
+          </article>
+        )}
+      </dialog>
       <ChatWidget />
     </main>
   );
