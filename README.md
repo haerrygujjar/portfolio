@@ -37,14 +37,34 @@ For private access, use Tailscale Serve instead of publishing a public hostname.
 
 ## Portfolio chat
 
-The optional “Chat with me” panel uses a small Python service and Amazon Bedrock's Llama 3.1 8B inference profile. Its fixed profile knowledge file is in `chat-api/knowledge/profile.md`; visitors cannot upload or change it. The browser sends messages to the same-origin `/api/chat` endpoint, and the service keeps no conversation history after responding.
+The “Chat with me” panel answers common questions about Hiren, Invorto, Lumen, Converse, his background, and his technical focus directly from the portfolio profile. This works without an AI model. If an optional Amazon Bedrock model is enabled and unavailable, the assistant offers a contact form instead of leaving the visitor with an error.
 
-For local use, provide AWS credentials with `bedrock:InvokeModel` access to the configured inference profile and its supported destination model resources, then run:
+Chat messages are stored in PostgreSQL. A visitor’s name, email, and unanswered question are stored only when they submit the contact form and agree that Hiren can use those details to reply. The database is reachable only on the private Docker network and uses a persistent Docker volume; it has no public port. The database password is kept in the ignored `.env` file.
 
 ```bash
-AWS_REGION=us-east-1 BEDROCK_MODEL_ID=us.meta.llama3-1-8b-instruct-v1:0 docker compose up --build -d
+cp .env.example .env
 ```
 
-On EC2, use an instance role instead of static AWS keys. Scope its policy to the selected Bedrock inference profile and required foundation model ARNs. Cross-region inference can process requests in the profile's destination regions. Model calls are billed by Amazon Bedrock. Nginx limits chat requests to 6 per minute per IP (with a small burst), caps global request rate, and rejects request bodies over 8 KB. Tune these limits and set a Bedrock budget or alert before sharing the site widely.
+Replace `POSTGRES_PASSWORD` in `.env` with a long random value, then start the site:
+
+```bash
+docker compose up --build -d
+```
+
+Read submitted inquiries from the host:
+
+```bash
+docker compose exec db psql -U portfolio -d portfolio -c 'SELECT created_at, name, email, message FROM inquiries ORDER BY created_at DESC;'
+```
+
+Review recent chat exchanges:
+
+```bash
+docker compose exec db psql -U portfolio -d portfolio -c 'SELECT created_at, session_id, role, message FROM chat_messages ORDER BY created_at DESC LIMIT 100;'
+```
+
+The volume survives container recreation and `docker compose down`; do not use `docker compose down -v` unless you intend to erase stored messages. Back up the database volume regularly. To enable Bedrock responses for questions outside the built-in answers, set `BEDROCK_ENABLED=true` and provide an EC2 instance role with narrowly scoped model access. Model calls are billed; without that setting, no model is called. If the chat API or database is unavailable, the widget offers Hiren’s email as a fallback.
+
+Nginx limits chat and inquiry submissions to 6 requests per minute per IP (with a small burst), caps global request rate, and rejects request bodies over 8 KB.
 
 Keep dependencies updated and review `pnpm audit` before releases.

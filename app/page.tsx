@@ -20,7 +20,7 @@ import {
   X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 const projects = [
   {
@@ -601,9 +601,18 @@ function ChatWidget() {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showContactForm, setShowContactForm] = useState(false);
+  const [contactName, setContactName] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactMessage, setContactMessage] = useState("");
+  const [contactStatus, setContactStatus] = useState("");
+  const sessionId = useRef("");
+  const messagesEnd = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<{ role: "assistant" | "user"; text: string }[]>([
     { role: "assistant", text: "Hey! I’m Hiren’s portfolio assistant. Ask me about his work, projects, or technical focus." },
   ]);
+
+  useEffect(() => messagesEnd.current?.scrollIntoView({ behavior: "smooth" }), [messages, busy, showContactForm, contactStatus]);
 
   async function sendMessage(text = draft) {
     const question = text.trim();
@@ -611,24 +620,56 @@ function ChatWidget() {
     setDraft("");
     setMessages((current) => [...current, { role: "user", text: question }]);
     setBusy(true);
+    if (!sessionId.current) sessionId.current = crypto.randomUUID();
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: question,
+          session_id: sessionId.current,
           history: messages.slice(1).slice(-8).map(({ role, text: content }) => ({ role, content })),
         }),
       });
       const data = await response.json();
+      if (data.needs_contact || !response.ok) {
+        setShowContactForm(true);
+        setContactMessage(question);
+      }
       setMessages((current) => [...current, {
         role: "assistant",
-        text: response.ok ? data.answer : "I couldn’t get a reply just now. Please try again in a moment.",
+        text: response.ok ? data.answer : "I’m having trouble connecting right now. Leave your question and contact details below and I’ll follow up, or email me directly.",
       }]);
     } catch {
-      setMessages((current) => [...current, { role: "assistant", text: "I couldn’t reach the chat service. Please try again shortly." }]);
+      setShowContactForm(true);
+      setContactMessage(question);
+      setMessages((current) => [...current, { role: "assistant", text: "I’m having trouble connecting right now. Leave your question and contact details below and I’ll follow up, or email me directly." }]);
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function sendContact(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setContactStatus("");
+    try {
+      const response = await fetch("/api/chat/lead", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: contactName,
+          email: contactEmail,
+          message: contactMessage,
+          session_id: sessionId.current,
+        }),
+      });
+      if (!response.ok) throw new Error("Message not saved");
+      setContactStatus("Thanks, your message is with Hiren.");
+      setContactName("");
+      setContactEmail("");
+      setContactMessage("");
+    } catch {
+      setContactStatus("Your message wasn’t saved. Email Hiren directly and he’ll get back to you.");
     }
   }
 
@@ -647,11 +688,10 @@ function ChatWidget() {
           >
             <header className="chat-topbar">
               <span className="chat-avatar">hg</span>
-              <div><strong>Chat with Hiren</strong><small><span /> Usually around · AI assistant</small></div>
+              <div><strong>Chat with Hiren</strong><small>Personal portfolio assistant</small></div>
               <button type="button" onClick={() => setOpen(false)} aria-label="Close chat"><X size={17} /></button>
             </header>
             <div className="chat-messages" aria-live="polite">
-              <div className="chat-sources">KNOWLEDGE FROM <span>RESUME</span><span>LINKEDIN</span></div>
               {messages.map((message, index) => (
                 <p key={`${index}-${message.role}`} className={`chat-bubble ${message.role}`}>{message.text}</p>
               ))}
@@ -661,12 +701,21 @@ function ChatWidget() {
                   <button key={prompt} type="button" onClick={() => void sendMessage(prompt)}>{prompt}<ArrowUpRight size={12} /></button>
                 ))}
               </div>}
+              {showContactForm && <form className="chat-contact-form" onSubmit={sendContact}>
+                <label>Name<input value={contactName} onChange={(event) => setContactName(event.target.value)} autoComplete="name" maxLength={80} required /></label>
+                <label>Email<input type="email" value={contactEmail} onChange={(event) => setContactEmail(event.target.value)} autoComplete="email" maxLength={254} required /></label>
+                <label>Your message<textarea value={contactMessage} onChange={(event) => setContactMessage(event.target.value)} maxLength={1500} rows={3} required /></label>
+                <label className="chat-consent"><input type="checkbox" required />I agree that Hiren can use these details to reply to me.</label>
+                <button type="submit">Send to Hiren <ArrowUpRight size={14} /></button>
+                {contactStatus && <p role="status">{contactStatus}{contactStatus.startsWith("Your message wasn’t saved") && <> <a href={`mailto:hirendragujjar@gmail.com?subject=${encodeURIComponent("Portfolio question")}&body=${encodeURIComponent(contactMessage)}`}>Email Hiren</a></>}</p>}
+              </form>}
+              <div ref={messagesEnd} />
             </div>
             <form className="chat-compose" onSubmit={(event) => { event.preventDefault(); void sendMessage(); }}>
               <input value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={1000} placeholder="Ask me anything…" aria-label="Your message" />
               <button type="submit" disabled={!draft.trim() || busy} aria-label="Send message"><Send size={16} /></button>
             </form>
-            <div className="chat-footnote">Replies are generated from Hiren’s public profile.</div>
+            <div className="chat-footnote">Messages are stored so Hiren can follow up.</div>
           </motion.section>
         )}
       </AnimatePresence>
