@@ -607,12 +607,15 @@ function ChatWidget() {
   const [contactMessage, setContactMessage] = useState("");
   const [contactStatus, setContactStatus] = useState("");
   const sessionId = useRef("");
-  const messagesEnd = useRef<HTMLDivElement>(null);
+  const messagesContainer = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<{ role: "assistant" | "user"; text: string }[]>([
     { role: "assistant", text: "Hey! I’m Hiren’s portfolio assistant. Ask me about his work, projects, or technical focus." },
   ]);
 
-  useEffect(() => messagesEnd.current?.scrollIntoView({ behavior: "smooth" }), [messages, busy, showContactForm, contactStatus]);
+  useEffect(() => {
+    const container = messagesContainer.current;
+    if (container) container.scrollTop = container.scrollHeight;
+  }, [messages, busy, showContactForm, contactStatus]);
 
   async function sendMessage(text = draft) {
     const question = text.trim();
@@ -691,7 +694,7 @@ function ChatWidget() {
               <div><strong>Chat with Hiren</strong><small>Personal portfolio assistant</small></div>
               <button type="button" onClick={() => setOpen(false)} aria-label="Close chat"><X size={17} /></button>
             </header>
-            <div className="chat-messages" aria-live="polite">
+            <div ref={messagesContainer} className="chat-messages" aria-live="polite">
               {messages.map((message, index) => (
                 <p key={`${index}-${message.role}`} className={`chat-bubble ${message.role}`}>{message.text}</p>
               ))}
@@ -709,7 +712,6 @@ function ChatWidget() {
                 <button type="submit">Send to Hiren <ArrowUpRight size={14} /></button>
                 {contactStatus && <p role="status">{contactStatus}{contactStatus.startsWith("Your message wasn’t saved") && <> <a href={`mailto:hirendragujjar@gmail.com?subject=${encodeURIComponent("Portfolio question")}&body=${encodeURIComponent(contactMessage)}`}>Email Hiren</a></>}</p>}
               </form>}
-              <div ref={messagesEnd} />
             </div>
             <form className="chat-compose" onSubmit={(event) => { event.preventDefault(); void sendMessage(); }}>
               <input value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={1000} placeholder="Ask me anything…" aria-label="Your message" />
